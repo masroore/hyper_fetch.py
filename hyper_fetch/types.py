@@ -54,7 +54,7 @@ class RateLimitConfig:
 @dataclass
 class CacheConfig:
     enabled: bool = True
-    storage_type: str = "memory"  # or "disk"
+    storage_type: str = "memory"  # or "disk", "db"
     max_size: int = 1024 * 1024 * 100  # 100MB
     ttl: int = 3600  # 1 hour
     cache_path: Optional[str] = None
@@ -90,6 +90,7 @@ class DownloadRequest:
     priority: DownloadPriority = DownloadPriority.NORMAL
     timeout: Optional[TimeoutConfig] = None
     headers: Optional[Dict[str, str]] = None
+    cookies: Optional[Dict[str, str]] = None
     verify_checksum: Optional[str] = None
     verify_method: VerificationMethod = VerificationMethod.SHA256
     chunk_config: Optional[ChunkConfig] = None
@@ -97,6 +98,8 @@ class DownloadRequest:
     schedule_time: Optional[datetime] = None
     auth: Optional[AuthConfig] = None
     ssl: Optional[SSLConfig] = None
+    verify_ssl: bool = True
+    proxy: Optional[str] = None
 
 
 @dataclass
