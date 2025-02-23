@@ -1,11 +1,12 @@
 import sqlite3
+from abc import ABC
 from typing import Optional
 from datetime import datetime
 
-from hyper_fetch.caching.base import CacheBackend
+from hyper_fetch.caching.base import SyncCacheBackend
 
 
-class SQLiteCache(CacheBackend):
+class SQLiteCache(SyncCacheBackend, ABC):
     def __init__(self, db_path: str):
         self.db_path = db_path
         self._initialize_db()
@@ -22,20 +23,22 @@ class SQLiteCache(CacheBackend):
             """)
             conn.commit()
 
-    async def get(self, key: str) -> Optional[bytes]:
+    def get(self, key: str) -> Optional[bytes]:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT value, expiry FROM cache WHERE key = ?", (key,))
+            cursor.execute(
+                "SELECT value, expiry FROM cache WHERE key = ?", (self.encode_key(key),)
+            )
             row = cursor.fetchone()
             if row:
                 value, expiry = row
                 if expiry > datetime.now().timestamp():
                     return value
                 else:
-                    await self.delete(key)
+                    self.delete(key)
         return None
 
-    async def set(self, key: str, value: bytes, ttl: Optional[int] = None) -> None:
+    def set(self, key: str, value: bytes, ttl: Optional[int] = None) -> None:
         expiry = datetime.now().timestamp() + (ttl or 3600)
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
@@ -48,13 +51,13 @@ class SQLiteCache(CacheBackend):
             )
             conn.commit()
 
-    async def delete(self, key: str) -> None:
+    def delete(self, key: str) -> None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM cache WHERE key = ?", (key,))
+            cursor.execute("DELETE FROM cache WHERE key = ?", (self.encode_key(key),))
             conn.commit()
 
-    async def clear(self) -> None:
+    def clear(self) -> None:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("DELETE FROM cache")

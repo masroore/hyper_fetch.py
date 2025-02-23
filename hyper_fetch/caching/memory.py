@@ -3,10 +3,10 @@ from abc import ABC
 from datetime import datetime
 from typing import Optional, Dict
 
-from hyper_fetch.caching.base import CacheBackend
+from hyper_fetch.caching.base import AsyncCacheBackend
 
 
-class MemoryCache(CacheBackend, ABC):
+class MemoryCache(AsyncCacheBackend, ABC):
     def __init__(self, max_size: int):
         self.cache: Dict[str, tuple[bytes, float]] = {}
         self.max_size = max_size
