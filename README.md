@@ -34,7 +34,27 @@ tracking, and more.
 pip install hyperfetch-py
 ```
 
+## Quick Usage
+
+```python
+import asyncio
+from hyper_fetch.downloader import AsyncDownloader
+from hyper_fetch.types import DownloadRequest
+
+
+async def main():
+    req = DownloadRequest.make("https://httpbin.org/headers")
+    downloader = AsyncDownloader()
+    result = await downloader.download(req)
+    print(result.content)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
 ## Usage
+
 ```python
 import asyncio
 from pathlib import Path
@@ -51,14 +71,15 @@ from hyper_fetch.types import (
     ProgressInfo,
 )
 
+
 def download(
-    urls: List[str],
-    output_dir: str,
-    concurrency: int,
-    retry: int,
-    timeout: int,
-    chunk_size: int,
-    verify: bool,
+        urls: List[str],
+        output_dir: str,
+        concurrency: int,
+        retry: int,
+        timeout: int,
+        chunk_size: int,
+        verify: bool,
 ):
     """Download files from URLs"""
     output_path = Path(output_dir)
@@ -108,7 +129,6 @@ def download(
     asyncio.run(run_downloads())
 ```
 
-
 ## Configuration
 
 You can configure HyperFetch using the following classes:
@@ -125,5 +145,3 @@ Contributions are welcome! Please feel free to submit a pull request or open an 
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for more information.
-
-```
