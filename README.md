@@ -32,7 +32,7 @@ tracking, and more.
 ## Installation
 
 ```bash
-pip install hyper_fetch
+pip install hyperfetch-py
 ```
 
 ## Configuration
