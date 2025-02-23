@@ -85,9 +85,7 @@ class AsyncDownloader:
 
         return response.content
 
-    async def _process_download(
-        self, client: httpx.AsyncClient, request: DownloadRequest
-    ) -> DownloadResult:
+    async def _process_download(self, request: DownloadRequest) -> DownloadResult:
         """Process a single download request"""
         # Check caching first
         if self.cache and request.cache_policy != "no-caching":
@@ -109,88 +107,89 @@ class AsyncDownloader:
         # Rate limiting
         await self.rate_limiter.acquire()
 
-        try:
-            if request.chunk_config and request.chunk_config.enabled:
-                # Get file size
-                response = await client.head(
-                    request.url,
-                    headers=request.headers,
-                    timeout=request.timeout,
-                    cookies=request.cookies,
-                )
-                total_size = int(response.headers["Content-Length"])
-                chunk_size = request.chunk_config.size
-                chunks = []
-
-                for start in range(0, total_size, chunk_size):
-                    end = min(start + chunk_size - 1, total_size - 1)
-                    chunk = await self._download_chunk(client, request, start, end)
-                    chunks.append(chunk)
-
-                    # Report progress
-                    if not any(self._progress_callbacks):
-                        continue
-
-                    progress = ProgressInfo(
-                        bytes_downloaded=start + len(chunk),
-                        total_bytes=total_size,
-                        chunk_index=len(chunks),
-                        total_chunks=(total_size + chunk_size - 1) // chunk_size,
-                        speed_bps=0.0,  # Calculate actual speed
-                        eta_seconds=None,  # Calculate ETA
+        async with self._get_client(request) as client:
+            try:
+                if request.chunk_config and request.chunk_config.enabled:
+                    # Get file size
+                    response = await client.head(
+                        request.url,
+                        headers=request.headers,
+                        timeout=request.timeout,
+                        cookies=request.cookies,
                     )
+                    total_size = int(response.headers["Content-Length"])
+                    chunk_size = request.chunk_config.size
+                    chunks = []
 
-                    for callback in self._progress_callbacks:
-                        callback(request.url, progress)
+                    for start in range(0, total_size, chunk_size):
+                        end = min(start + chunk_size - 1, total_size - 1)
+                        chunk = await self._download_chunk(client, request, start, end)
+                        chunks.append(chunk)
 
-                content = b"".join(chunks)
-            else:
-                response = await client.get(
-                    request.url,
-                    headers=request.headers,
-                    timeout=request.timeout,
-                    cookies=request.cookies,
+                        # Report progress
+                        if not any(self._progress_callbacks):
+                            continue
+
+                        progress = ProgressInfo(
+                            bytes_downloaded=start + len(chunk),
+                            total_bytes=total_size,
+                            chunk_index=len(chunks),
+                            total_chunks=(total_size + chunk_size - 1) // chunk_size,
+                            speed_bps=0.0,  # Calculate actual speed
+                            eta_seconds=None,  # Calculate ETA
+                        )
+
+                        for callback in self._progress_callbacks:
+                            callback(request.url, progress)
+
+                    content = b"".join(chunks)
+                else:
+                    response = await client.get(
+                        request.url,
+                        headers=request.headers,
+                        timeout=request.timeout,
+                        cookies=request.cookies,
+                    )
+                    content = response.content
+
+                # Verify checksum if provided
+                calculated_checksum = None
+                checksum_verified = False
+                if request.verify_checksum:
+                    hasher = getattr(hashlib, request.verify_method.value)()
+                    hasher.update(content)
+                    calculated_checksum = hasher.hexdigest()
+                    checksum_verified = calculated_checksum == request.verify_checksum
+
+                result = DownloadResult(
+                    url=request.url,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    content=content,
+                    context=request.context,
+                    checksum=calculated_checksum if request.verify_checksum else None,
+                    checksum_verified=checksum_verified,
                 )
-                content = response.content
 
-            # Verify checksum if provided
-            calculated_checksum = None
-            checksum_verified = False
-            if request.verify_checksum:
-                hasher = getattr(hashlib, request.verify_method.value)()
-                hasher.update(content)
-                calculated_checksum = hasher.hexdigest()
-                checksum_verified = calculated_checksum == request.verify_checksum
+                # Cache the result if appropriate
+                if self.cache and response.status_code == 200:
+                    await self.cache.set(request.url, content)
 
-            result = DownloadResult(
-                url=request.url,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                content=content,
-                context=request.context,
-                checksum=calculated_checksum if request.verify_checksum else None,
-                checksum_verified=checksum_verified,
-            )
+                # Apply plugins post-response
+                for plugin in self.plugins:
+                    result = await plugin.post_response(result)
 
-            # Cache the result if appropriate
-            if self.cache and response.status_code == 200:
-                await self.cache.set(request.url, content)
+                return result
 
-            # Apply plugins post-response
-            for plugin in self.plugins:
-                result = await plugin.post_response(result)
-
-            return result
-
-        except Exception as e:
-            return DownloadResult(
-                url=request.url,
-                status_code=-1,
-                headers={},
-                content=b"",
-                context=request.context,
-                error=e,
-            )
+            except Exception as e:
+                return DownloadResult(
+                    url=request.url,
+                    status_code=-1,
+                    headers={},
+                    content=b"",
+                    context=request.context,
+                    error=e,
+                )
 
     def _get_client(self, request: DownloadRequest) -> httpx.AsyncClient:
         return httpx.AsyncClient(
@@ -200,22 +199,20 @@ class AsyncDownloader:
 
     async def download(self, request: DownloadRequest) -> DownloadResult:
         """Download a single URL"""
-        async with self._get_client(request) as client:
-            return await self._process_download(client, request)
+        return await self._process_download(request)
 
     async def download_many(
         self, requests: List[DownloadRequest]
     ) -> List[DownloadResult]:
         """Download multiple URLs concurrently"""
-        async with self._get_client(requests[0]) as client:
-            semaphore = asyncio.Semaphore(self.concurrency)
+        semaphore = asyncio.Semaphore(self.concurrency)
 
-            async def bounded_download(request: DownloadRequest) -> DownloadResult:
-                async with semaphore:
-                    return await self._process_download(client, request)
+        async def bounded_download(request: DownloadRequest) -> DownloadResult:
+            async with semaphore:
+                return await self._process_download(request)
 
-            tasks = [bounded_download(request) for request in requests]
-            return await asyncio.gather(*tasks)
+        tasks = [bounded_download(request) for request in requests]
+        return await asyncio.gather(*tasks)
 
     async def add_to_queue(self, request: DownloadRequest) -> None:
         """Add a download request to the queue"""
