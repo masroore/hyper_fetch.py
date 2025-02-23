@@ -19,9 +19,8 @@ tracking, and more.
 * **Caching:** Avoid redundant downloads with a built-in caching mechanism.
 * **Redirect Handling:** Control redirect behavior.
 * **SSL/TLS Verification:** Configurable SSL/TLS verification settings.
-* **Custom Headers & User-Agent:** Customize request headers and User-Agent.
+* **Custom Headers:** Customize request headers.
 * **Cookies:** Support for storing and sending cookies.
-* **Authentication:** Support for basic and other forms of HTTP authentication.
 * **Download Queues:** Manage large numbers of URLs with download queues.
 * **Download Scheduling:** Schedule downloads for specific times.
 * **Plugin System:** Extend functionality with custom plugins.
@@ -34,6 +33,81 @@ tracking, and more.
 ```bash
 pip install hyperfetch-py
 ```
+
+## Usage
+```python
+import asyncio
+from pathlib import Path
+from typing import List
+
+import aiofiles
+
+from hyper_fetch.downloader import AsyncDownloader
+from hyper_fetch.types import (
+    RetryConfig,
+    ChunkConfig,
+    SSLConfig,
+    DownloadRequest,
+    ProgressInfo,
+)
+
+def download(
+    urls: List[str],
+    output_dir: str,
+    concurrency: int,
+    retry: int,
+    timeout: int,
+    chunk_size: int,
+    verify: bool,
+):
+    """Download files from URLs"""
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+
+    # Configure downloader
+    retry_config = RetryConfig(max_attempts=retry)
+    chunk_config = ChunkConfig(enabled=True, size=chunk_size)
+    ssl_config = SSLConfig(verify=verify)
+
+    # Progress callback
+    def show_progress(url: str, progress: ProgressInfo):
+        if progress.total_bytes:
+            percentage = (progress.bytes_downloaded / progress.total_bytes) * 100
+            print(f"{url}: {percentage:.1f}% complete")
+
+    async def run_downloads():
+        downloader = AsyncDownloader(concurrency=concurrency, retry_config=retry_config)
+        downloader.add_progress_callback(show_progress)
+
+        # Create download requests
+        requests = [
+            DownloadRequest(
+                url=url,
+                context={"output_path": output_path / Path(url).name},
+                chunk_config=chunk_config,
+                ssl=ssl_config,
+            )
+            for url in urls
+        ]
+
+        # Download files
+        results = await downloader.download_many(requests)
+
+        # Save files
+        for result in results:
+            if result.error:
+                print(f"Error downloading {result.url}: {result.error}")
+                continue
+
+            output_file = result.context["output_path"]
+            async with aiofiles.open(output_file, "wb") as f:
+                await f.write(result.content)
+
+            print(f"Downloaded {result.url} to {output_file}")
+
+    asyncio.run(run_downloads())
+```
+
 
 ## Configuration
 
