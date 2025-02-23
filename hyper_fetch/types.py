@@ -9,6 +9,7 @@ from typing import (
     TypeVar,
     Protocol,
     runtime_checkable,
+    Callable,
 )
 
 T = TypeVar("T")
@@ -101,8 +102,16 @@ class DownloadRequest:
     proxy: Optional[str] = None
 
     @classmethod
-    def make(cls, url: str) -> "DownloadRequest":
-        return cls(url=url)
+    def make(cls, url: str, context: Any = None) -> "DownloadRequest":
+        return cls(url=url, context=context)
+
+    @classmethod
+    def make_many(
+        cls, urls: List[str], callback: Callable[[str], None]
+    ) -> List["DownloadRequest"]:
+        return [
+            cls(url=url, context=callback(url) if callback else None) for url in urls
+        ]
 
 
 @dataclass
