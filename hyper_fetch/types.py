@@ -94,7 +94,7 @@ class DownloadRequest:
     verify_checksum: Optional[str] = None
     verify_method: VerificationMethod = VerificationMethod.SHA256
     chunk_config: Optional[ChunkConfig] = None
-    cache_policy: Optional[str] = None
+    bypass_cache: bool = False
     schedule_time: Optional[datetime] = None
     auth: Optional[AuthConfig] = None
     ssl: Optional[SSLConfig] = None

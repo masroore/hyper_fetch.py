@@ -88,7 +88,7 @@ class AsyncDownloader:
     async def _process_download(self, request: DownloadRequest) -> DownloadResult:
         """Process a single download request"""
         # Check caching first
-        if self.cache and request.cache_policy != "no-caching":
+        if self.cache and not request.bypass_cache:
             cached_data = await self.cache.get(request.url)
             if cached_data:
                 return DownloadResult(
