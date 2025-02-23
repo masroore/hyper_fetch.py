@@ -13,15 +13,19 @@ class MemoryCache(AsyncCacheBackend, ABC):
         self._lock = asyncio.Lock()
 
     async def get(self, key: str) -> Optional[bytes]:
+        key = self.encode_key(key)
         async with self._lock:
             if key in self.cache:
                 data, expiry = self.cache[key]
                 if expiry > datetime.now().timestamp():
                     return data
+
                 del self.cache[key]
+
             return None
 
     async def set(self, key: str, value: bytes, ttl: Optional[int] = None) -> None:
+        key = self.encode_key(key)
         async with self._lock:
             while (
                 sum(len(v[0]) for v in self.cache.values()) + len(value) > self.max_size
@@ -34,3 +38,8 @@ class MemoryCache(AsyncCacheBackend, ABC):
 
             expiry = datetime.now().timestamp() + (ttl or 3600)
             self.cache[key] = (value, expiry)
+
+    async def delete(self, key: str) -> None:
+        key = self.encode_key(key)
+        async with self._lock:
+            self.cache.pop(key, None)

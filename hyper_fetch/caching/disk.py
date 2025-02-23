@@ -18,35 +18,51 @@ class DiskCache(AsyncCacheBackend, ABC):
         self._lock = asyncio.Lock()
 
     async def get(self, key: str) -> Optional[bytes]:
-        file_path = self.cache_dir / self.encode_key(key)
+        file_path = self._file_path(key)
         try:
             async with aiofiles.open(file_path, "rb") as f:
                 metadata = pickle.loads(await f.read())
                 if metadata["expiry"] > datetime.now().timestamp():
                     return metadata["data"]
+
                 await self.delete(key)
         except (FileNotFoundError, pickle.PickleError):
-            return None
+            pass
+
         return None
+
+    def _file_path(self, key: str) -> Path:
+        return self.cache_dir / self.encode_key(key)
+
+    def _purge_cache(self, requested_size: int):
+        # Check and enforce size limit
+        if self.max_size <= 0:
+            return
+
+        current_size = sum(f.stat().st_size for f in self.cache_dir.glob("*"))
+        while current_size + requested_size > self.max_size:
+            # Remove oldest file
+            files = sorted(self.cache_dir.glob("*"), key=lambda x: x.stat().st_mtime)
+            if not files:
+                return
+            files[0].unlink()
+            current_size = sum(f.stat().st_size for f in self.cache_dir.glob("*"))
 
     async def set(self, key: str, value: bytes, ttl: Optional[int] = None) -> None:
         async with self._lock:
-            # Check and enforce size limit
-            current_size = sum(f.stat().st_size for f in self.cache_dir.glob("*"))
-            while current_size + len(value) > self.max_size:
-                # Remove oldest file
-                files = sorted(
-                    self.cache_dir.glob("*"), key=lambda x: x.stat().st_mtime
-                )
-                if not files:
-                    return
-                files[0].unlink()
-                current_size = sum(f.stat().st_size for f in self.cache_dir.glob("*"))
+            self._purge_cache(len(value))
 
-            file_path = self.cache_dir / self.encode_key(key)
+            file_path = self._file_path(key)
             metadata = {
                 "data": value,
                 "expiry": datetime.now().timestamp() + (ttl or 3600),
             }
             async with aiofiles.open(file_path, "wb") as f:
                 await f.write(pickle.dumps(metadata))
+
+    async def delete(self, key: str) -> None:
+        file_path = self._file_path(key)
+        try:
+            file_path.unlink()
+        except FileNotFoundError:
+            pass
