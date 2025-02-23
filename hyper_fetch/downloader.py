@@ -6,6 +6,7 @@ from typing import Type, Callable
 
 import httpx
 
+from .caching.db import SQLiteCache
 from .caching.disk import DiskCache
 from .caching.memory import MemoryCache
 from .rate_limiter.token_bucket import TokenBucketRateLimiter
@@ -32,9 +33,11 @@ class AsyncDownloader:
         if cache_config and cache_config.enabled:
             if cache_config.storage_type == "memory":
                 self.cache = MemoryCache(cache_config.max_size)
+            elif cache_config.storage_type == "db":
+                self.cache = SQLiteCache(Path(cache_config.cache_path or ".cache.db"))
             else:
                 self.cache = DiskCache(
-                    Path(cache_config.cache_dir or ".caching"), cache_config.max_size
+                    Path(cache_config.cache_path or ".cache"), cache_config.max_size
                 )
         else:
             self.cache = None

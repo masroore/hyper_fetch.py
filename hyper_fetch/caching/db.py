@@ -1,5 +1,6 @@
 import sqlite3
 from abc import ABC
+from pathlib import Path
 from typing import Optional
 from datetime import datetime
 
@@ -7,7 +8,7 @@ from hyper_fetch.caching.base import SyncCacheBackend
 
 
 class SQLiteCache(SyncCacheBackend, ABC):
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: Path):
         self.db_path = db_path
         self._initialize_db()
 

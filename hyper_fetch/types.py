@@ -57,7 +57,7 @@ class CacheConfig:
     storage_type: str = "memory"  # or "disk"
     max_size: int = 1024 * 1024 * 100  # 100MB
     ttl: int = 3600  # 1 hour
-    cache_dir: Optional[str] = None
+    cache_path: Optional[str] = None
 
 
 @dataclass
