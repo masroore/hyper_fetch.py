@@ -120,6 +120,9 @@ class AsyncDownloader:
                     chunks.append(chunk)
 
                     # Report progress
+                    if not any(self._progress_callbacks):
+                        continue
+
                     progress = ProgressInfo(
                         bytes_downloaded=start + len(chunk),
                         total_bytes=total_size,
