@@ -1,0 +1,14 @@
+[project]
+name = "hyper-fetch-py"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiofiles>=24.1.0",
+    "asyncio",
+    "brotli>=1.1.0",
+    "click>=8.1.8",
+    "httpx[socks]>=0.28.1",
+    "zstandard>=0.23.0",
+]
