@@ -77,7 +77,10 @@ class AsyncDownloader:
         headers["Range"] = f"bytes={start}-{end}"
 
         response = await client.get(
-            request.url, headers=headers, timeout=request.timeout
+            request.url,
+            headers=headers,
+            timeout=request.timeout,
+            cookies=request.cookies,
         )
 
         return response.content
@@ -109,7 +112,12 @@ class AsyncDownloader:
         try:
             if request.chunk_config and request.chunk_config.enabled:
                 # Get file size
-                response = await client.head(request.url)
+                response = await client.head(
+                    request.url,
+                    headers=request.headers,
+                    timeout=request.timeout,
+                    cookies=request.cookies,
+                )
                 total_size = int(response.headers["Content-Length"])
                 chunk_size = request.chunk_config.size
                 chunks = []
@@ -138,7 +146,10 @@ class AsyncDownloader:
                 content = b"".join(chunks)
             else:
                 response = await client.get(
-                    request.url, headers=request.headers, timeout=request.timeout
+                    request.url,
+                    headers=request.headers,
+                    timeout=request.timeout,
+                    cookies=request.cookies,
                 )
                 content = response.content
 
@@ -181,16 +192,22 @@ class AsyncDownloader:
                 error=e,
             )
 
+    def _get_client(self, request: DownloadRequest) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            proxy=request.proxy,
+            verify=request.verify_ssl,
+        )
+
     async def download(self, request: DownloadRequest) -> DownloadResult:
         """Download a single URL"""
-        async with httpx.AsyncClient() as client:
+        async with self._get_client(request) as client:
             return await self._process_download(client, request)
 
     async def download_many(
         self, requests: List[DownloadRequest]
     ) -> List[DownloadResult]:
         """Download multiple URLs concurrently"""
-        async with httpx.AsyncClient() as client:
+        async with self._get_client(requests[0]) as client:
             semaphore = asyncio.Semaphore(self.concurrency)
 
             async def bounded_download(request: DownloadRequest) -> DownloadResult:
