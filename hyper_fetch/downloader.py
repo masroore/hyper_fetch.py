@@ -107,7 +107,10 @@ class AsyncDownloader:
         # Rate limiting
         await self.rate_limiter.acquire()
 
-        async with self._get_client(request) as client:
+        async with httpx.AsyncClient(
+            proxy=request.proxy,
+            verify=(request.ssl and request.ssl.verify),
+        ) as client:
             try:
                 if request.chunk_config and request.chunk_config.enabled:
                     # Get file size
@@ -190,12 +193,6 @@ class AsyncDownloader:
                     context=request.context,
                     error=e,
                 )
-
-    def _get_client(self, request: DownloadRequest) -> httpx.AsyncClient:
-        return httpx.AsyncClient(
-            proxy=request.proxy,
-            verify=(request.ssl and request.ssl.verify),
-        )
 
     async def download(self, request: DownloadRequest) -> DownloadResult:
         """Download a single URL"""
