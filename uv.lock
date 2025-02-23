@@ -177,8 +177,8 @@ socks = [
 ]
 
 [[package]]
-name = "hyper-fetch-py"
-version = "0.1.0"
+name = "hyper-fetch"
+version = "0.0.1"
 source = { virtual = "." }
 dependencies = [
     { name = "aiofiles" },

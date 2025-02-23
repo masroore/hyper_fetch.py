@@ -1,7 +1,7 @@
 [project]
-name = "hyper-fetch-py"
-version = "0.1.0"
-description = "Add your description here"
+name = "hyper_fetch"
+version = "0.0.1"
+description = "High-performance, async, parallel HTTP downloader for Python 3"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
