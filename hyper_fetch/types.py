@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum, IntEnum
 from typing import (
     Any,
     Dict,
@@ -15,14 +15,14 @@ from typing import (
 T = TypeVar("T")
 
 
-class DownloadPriority(Enum):
+class DownloadPriority(IntEnum):
     LOW = 0
-    NORMAL = 1
-    HIGH = 2
-    CRITICAL = 3
+    NORMAL = 5
+    HIGH = 7
+    CRITICAL = 9
 
 
-class VerificationMethod(Enum):
+class VerificationMethod(StrEnum):
     MD5 = "md5"
     SHA256 = "sha256"
     SHA512 = "sha512"
