@@ -17,7 +17,7 @@ from hyper_fetch.types import (
 
 @click.group()
 def cli():
-    """Advanced Async Downloader CLI"""
+    """HyperFetch CLI"""
     pass
 
 
