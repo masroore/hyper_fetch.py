@@ -1,6 +1,6 @@
 [project]
 name = "hyperfetch-py"
-version = "0.0.1"
+version = "0.0.1a"
 authors = [
     { name = "Masroor Ehsan", email = "masroore@gmail.com" },
 ]
