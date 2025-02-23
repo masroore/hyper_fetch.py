@@ -98,7 +98,6 @@ class DownloadRequest:
     schedule_time: Optional[datetime] = None
     auth: Optional[AuthConfig] = None
     ssl: Optional[SSLConfig] = None
-    verify_ssl: bool = True
     proxy: Optional[str] = None
 
 

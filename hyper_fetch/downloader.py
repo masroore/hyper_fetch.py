@@ -195,7 +195,7 @@ class AsyncDownloader:
     def _get_client(self, request: DownloadRequest) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             proxy=request.proxy,
-            verify=request.verify_ssl,
+            verify=(request.ssl and request.ssl.verify),
         )
 
     async def download(self, request: DownloadRequest) -> DownloadResult:
