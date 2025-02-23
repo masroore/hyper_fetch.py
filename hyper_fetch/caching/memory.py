@@ -3,7 +3,7 @@ from abc import ABC
 from datetime import datetime
 from typing import Optional, Dict
 
-from hyper_fetch.cache.base import CacheBackend
+from hyper_fetch.caching.base import CacheBackend
 
 
 class MemoryCache(CacheBackend, ABC):

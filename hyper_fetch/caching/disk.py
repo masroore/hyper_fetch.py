@@ -8,7 +8,7 @@ from typing import Optional
 
 import aiofiles
 
-from hyper_fetch.cache.base import CacheBackend
+from hyper_fetch.caching.base import CacheBackend
 
 
 class DiskCache(CacheBackend, ABC):

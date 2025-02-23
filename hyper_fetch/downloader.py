@@ -6,8 +6,8 @@ from typing import Type, Callable
 
 import httpx
 
-from .cache.disk import DiskCache
-from .cache.memory import MemoryCache
+from .caching.disk import DiskCache
+from .caching.memory import MemoryCache
 from .rate_limiter.token_bucket import TokenBucketRateLimiter
 from .types import *
 
@@ -28,13 +28,13 @@ class AsyncDownloader:
             rate_limit_config.burst_size if rate_limit_config else 20,
         )
 
-        # Initialize cache
+        # Initialize caching
         if cache_config and cache_config.enabled:
             if cache_config.storage_type == "memory":
                 self.cache = MemoryCache(cache_config.max_size)
             else:
                 self.cache = DiskCache(
-                    Path(cache_config.cache_dir or ".cache"), cache_config.max_size
+                    Path(cache_config.cache_dir or ".caching"), cache_config.max_size
                 )
         else:
             self.cache = None
@@ -83,8 +83,8 @@ class AsyncDownloader:
         self, client: httpx.AsyncClient, request: DownloadRequest
     ) -> DownloadResult:
         """Process a single download request"""
-        # Check cache first
-        if self.cache and request.cache_policy != "no-cache":
+        # Check caching first
+        if self.cache and request.cache_policy != "no-caching":
             cached_data = await self.cache.get(request.url)
             if cached_data:
                 return DownloadResult(
