@@ -86,7 +86,7 @@ class AuthConfig:
 @dataclass
 class DownloadRequest:
     url: str
-    context: Any
+    context: Any = None
     priority: DownloadPriority = DownloadPriority.NORMAL
     timeout: Optional[TimeoutConfig] = None
     headers: Optional[Dict[str, str]] = None
@@ -100,6 +100,10 @@ class DownloadRequest:
     ssl: Optional[SSLConfig] = None
     proxy: Optional[str] = None
 
+    @classmethod
+    def make(cls, url: str) -> "DownloadRequest":
+        return cls(url=url)
+
 
 @dataclass
 class ProgressInfo:
@@ -107,7 +111,7 @@ class ProgressInfo:
     total_bytes: Optional[int]
     chunk_index: Optional[int]
     total_chunks: Optional[int]
-    speed_bps: float
+    speed_bps: Optional[float]
     eta_seconds: Optional[float]
 
 
